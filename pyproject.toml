@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "asv_rl"
+version = "0.1.0"
+description = "A project exploring autonomous surface vessel navigation using reinforcement learning"
+authors = ["Mark Prettyman <mark.prettyman16@gmail.com>"]
+readme = "README.md"
+packages = [{include = "asv", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+numpy = "^2.2.1"
+gymnasium = "^1.0.0"
+ipykernel = "^6.29.5"
+jupyter = "^1.0.0"
+matplotlib = "^3.10.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+ruff = "^0.8.5"
+mypy = "^1.14.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+python_version = "^3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true 
