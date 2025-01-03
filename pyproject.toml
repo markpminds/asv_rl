@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A project exploring autonomous surface vessel navigation using reinforcement learning"
 authors = ["Mark Prettyman <mark.prettyman16@gmail.com>"]
 readme = "README.md"
-packages = [{include = "asv", from = "src"}]
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
