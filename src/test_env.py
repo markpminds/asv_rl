@@ -1,63 +1,59 @@
 import numpy as np
 from environment import ASVEnvironment
+from config import setup_logger
 import time
 import matplotlib.pyplot as plt
 
-def test_straight_movement():
-    """Test moving straight ahead"""
-    env = ASVEnvironment()
-    obs, _ = env.reset()
-    
-    print("Testing straight movement...")
-    for _ in range(20):
-        action = np.array([1.0, 0.0])  # Full throttle, no rudder
-        obs, reward, done, _, _ = env.step(action)
-        env.render()
-        print(f"Position: ({obs['vessel_state'][0]:.2f}, {obs['vessel_state'][1]:.2f}), "
-              f"Speed: {obs['vessel_state'][3]:.2f}, "
-              f"Heading: {obs['vessel_state'][2]:.2f}")
-        time.sleep(0.1)
-        break
+logger = setup_logger('ASV_Environment_Test')
 
-def test_turning():
-    """Test turning behavior"""
+def test_environment():
+    # Create and initialize environment
     env = ASVEnvironment()
+    
+    # Get initial state
     obs, _ = env.reset()
     
-    print("\nTesting turning movement...")
-    for _ in range(5):
-        action = np.array([0.5, np.pi/4])  # Half throttle, full right rudder
-        obs, reward, done, _, _ = env.step(action)
-        env.render()
-        print(f"Position: ({obs['vessel_state'][0]:.2f}, {obs['vessel_state'][1]:.2f}), "
-              f"Angular Velocity: {obs['vessel_state'][4]:.2f}, "
-              f"Heading: {obs['vessel_state'][2]:.2f}")
-        time.sleep(0.1)
-        if done:
-            break
+    # Get actual position from environment state (not normalized)
+    actual_x, actual_y = env.state[:2]
+    
+    logger.info("Initial State:")
+    logger.info(f"Vessel Position: ({actual_x:.2f}, {actual_y:.2f})")  # Use actual state values
+    logger.info(f"Vessel Heading: {env.state[2]:.2f}")  # Actual heading in radians
+    logger.info(f"Goal Position: ({env.goal[0]:.2f}, {env.goal[1]:.2f})")
+    logger.info("Obstacles:")
+    for i, obs in enumerate(env.obstacles):
+        logger.info(f"Obstacle {i+1}: position ({obs[0]:.2f}, {obs[1]:.2f}), radius {obs[2]:.2f}")
+    logger.info("Threat Zones:")
+    for i, zone in enumerate(env.threat_zones):
+        logger.info(f"Zone {i+1}: center ({zone[0]:.2f}, {zone[1]:.2f}), width {zone[2]:.2f}, height {zone[3]:.2f}")
 
-def test_random_actions():
-    """Test random actions"""
-    env = ASVEnvironment()
-    obs, _ = env.reset()
+    # Visualize environment
+    logger.info("Displaying environment visualization...")
+    env.render()
     
-    print("\nTesting random actions...")
-    for _ in range(5):
+    # Test a few random actions
+    logger.info("Testing random actions:")
+    for i in range(20):
         action = env.action_space.sample()
-        obs, reward, done, _, _ = env.step(action)
+        obs, reward, done, truncated, _ = env.step(action)
+        
+        # Get actual position from environment state
+        actual_x, actual_y = env.state[:2]
+        
+        logger.info(f"Step {i+1}:")
+        logger.info(f"Action: throttle={action[0]:.2f}, rudder={action[1]:.2f}")
+        logger.info(f"Position: ({actual_x:.2f}, {actual_y:.2f})")  # Use actual state values
+        logger.info(f"Reward: {reward:.2f}")
+        
         env.render()
-        print(f"Action: {action}")
-        print(f"Position: ({obs['vessel_state'][0]:.2f}, {obs['vessel_state'][1]:.2f}), "
-              f"Speed: {obs['vessel_state'][3]:.2f}, "
-              f"Heading: {obs['vessel_state'][2]:.2f}")
-        time.sleep(0.1)
-        if done:
+        time.sleep(0.1)  # Pause to make visualization visible
+        
+        if done or truncated:
+            logger.info("Episode ended!")
             break
+    
+    # Keep the plot window open until manually closed
+    plt.show()
 
 if __name__ == "__main__":
-    # Run tests
-    test_straight_movement()
-    #test_turning()
-    #test_random_actions()
-    
-    plt.show(block=True)  # This will keep all figures open 
+    test_environment() 

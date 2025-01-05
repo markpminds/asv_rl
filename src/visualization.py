@@ -65,7 +65,7 @@ class ASVVisualizer:
             self.ax.add_artist(ab)
             
             
-    def draw_goal(self, x, y, radius=20):
+    def draw_goal(self, x, y, radius=2):
         """Draw the goal position"""
         goal = Circle((x, y), radius, color='green', alpha=0.3)
         self.ax.add_patch(goal)
