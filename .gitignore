@@ -30,6 +30,9 @@ wheels/
 *.swp
 *.swo 
 
+# macOS system files
+.DS_Store
+
 # Model files
 *.zip
 models/
