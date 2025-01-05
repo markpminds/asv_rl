@@ -220,10 +220,10 @@ class ASVEnvironment(gym.Env):
 
         reward = 0.0
         distance_to_goal = np.linalg.norm(self.goal - np.array([x, y]))
+        goal_bearing = np.arctan2(self.goal[1] - y, self.goal[0] - x)  # Calculate this first
 
         if self.last_distance_to_goal is not None:
             # Simplified reward structure with smaller, stable values
-            goal_bearing = np.arctan2(self.goal[1] - y, self.goal[0] - x)
             heading_diff = abs(np.mod(goal_bearing - heading + np.pi, 2*np.pi) - np.pi)
             
             # 1. Primary reward: Getting closer to goal

@@ -15,7 +15,7 @@ def test_trained_model(episodes=1, seed=DEFAULT_SEED):
     env = ASVEnvironment(seed=seed)
     
     # Load the trained model
-    model = SAC.load("sac_asv_final")
+    model = SAC.load("models/prelim_sac/sac_asv")
     
     for episode in range(episodes):
         logger.info(f"\nStarting Episode {episode + 1}")
