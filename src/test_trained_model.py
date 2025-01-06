@@ -1,6 +1,7 @@
 from stable_baselines3 import SAC, PPO
 import argparse
-import os
+import wandb
+from pathlib import Path
 from my_gymnasium.environment import ASVEnvironment
 from config import setup_logger, DEFAULT_SEED
 import matplotlib.pyplot as plt
@@ -19,22 +20,48 @@ def get_model_class(model_type):
         raise ValueError(f"Unsupported model type: {model_type}. Supported types: {list(model_types.keys())}")
     return model_types[model_type.lower()]
 
-def test_trained_model(model_type='sac', version='v1', episodes=1, seed=DEFAULT_SEED):
+def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_SEED):
     """Test the trained model for multiple episodes"""
     
     # Create environment with same seed
     env = ASVEnvironment(seed=seed)
     
-    # Construct model path
-    model_path = os.path.join("models", model_type, version, f"{model_type}_asv_final")
-    if not os.path.exists(model_path + ".zip"):
-        raise FileNotFoundError(f"Model not found at {model_path}.zip")
+    # Initialize wandb in offline mode (just for loading model)
+    wandb.init(project="asv-navigation", id=run_id, resume="allow")
+    
+    # Get the run's files
+    run = wandb.run
+    if not run:
+        raise ValueError(f"Could not find wandb run with id {run_id}")
+        
+    # Find the latest model file in the run
+    model_files = [f for f in run.files() if f.name.endswith('.zip')]
+    if not model_files:
+        raise FileNotFoundError(f"No model files found in run {run_id}")
+    
+    # Sort by timestamp and get latest
+    latest_model = sorted(model_files, key=lambda x: x.updated_at)[-1]
+    
+    # Download the model file
+    model_path = Path("wandb") / run.id / "files" / latest_model.name
+    if not model_path.exists():
+        latest_model.download(root="wandb", replace=True)
     
     # Load the appropriate model type
     ModelClass = get_model_class(model_type)
-    model = ModelClass.load(model_path)
+    model = ModelClass.load(str(model_path))
     
-    logger.info(f"Testing {model_type.upper()} model version {version}")
+    logger.info(f"Testing {model_type.upper()} model from run {run_id}")
+    
+    # Get git info from metadata
+    metadata_path = Path("wandb") / run_id / "files" / "wandb-metadata.json"
+    if metadata_path.exists():
+        import json
+        with open(metadata_path) as f:
+            metadata = json.load(f)
+            logger.info(f"Model trained with:")
+            logger.info(f"Git commit: {metadata.get('git', {}).get('commit')}")
+            logger.info(f"Branch: {metadata.get('git', {}).get('branch')}")
     
     for episode in range(episodes):
         logger.info(f"\nStarting Episode {episode + 1}")
@@ -73,8 +100,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test a trained RL model')
     parser.add_argument('--model-type', type=str, default='sac',
                       help='Type of model to test (sac, ppo)')
-    parser.add_argument('--version', type=str, default='v1',
-                      help='Version of the model to test (e.g., v1, v2)')
+    parser.add_argument('--run-id', type=str, required=True,
+                      help='Wandb run ID to load model from')
     parser.add_argument('--episodes', type=int, default=1,
                       help='Number of episodes to run')
     parser.add_argument('--seed', type=int, default=DEFAULT_SEED,
@@ -84,7 +111,7 @@ if __name__ == "__main__":
     
     test_trained_model(
         model_type=args.model_type,
-        version=args.version,
+        run_id=args.run_id,
         episodes=args.episodes,
         seed=args.seed
     ) 

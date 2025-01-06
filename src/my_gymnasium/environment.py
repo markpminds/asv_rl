@@ -17,8 +17,11 @@ from my_gymnasium.visualization import ASVVisualizer
 
 logger = setup_logger('ASV_Environment')
 
+VERSION = "1.0.0"  # Increment this when making significant changes
+
 class ASVEnvironment(gym.Env):
     def __init__(self, seed=None):
+        self.version = VERSION
         super().__init__()
         # Set the seed for the environment
         self.np_random, _ = gym.utils.seeding.np_random(seed)
