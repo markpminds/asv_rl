@@ -24,8 +24,8 @@ class ASVEnvironment(gym.Env):
         self.np_random, _ = gym.utils.seeding.np_random(seed)
         
         self.action_space = spaces.Box(
-            low=np.array([0.0, -np.pi/16]),
-            high=np.array([1.0, np.pi/16]),
+            low=np.array([0.0, -np.pi/8], dtype=np.float32),
+            high=np.array([1.0, np.pi/8], dtype=np.float32),
             dtype=np.float32
         )
         
@@ -33,28 +33,28 @@ class ASVEnvironment(gym.Env):
         self.observation_space = spaces.Dict({
             # Vessel state - normalized values
             'vessel_state': spaces.Box(
-                low=np.array([-1.0, -1.0, -1.0, 0.0, -1.0]),  # Normalized coordinates
-                high=np.array([1.0, 1.0, 1.0, 1.0, 1.0]),
+                low=np.array([-1.0, -1.0, -1.0, 0.0, -1.0], dtype=np.float32),
+                high=np.array([1.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32),
                 dtype=np.float32
             ),
             # Goal information - normalized
             'goal_info': spaces.Box(
-                low=np.array([0.0, -1.0]),    # Normalized distance and bearing
-                high=np.array([1.0, 1.0]),
+                low=np.array([0.0, -1.0], dtype=np.float32),
+                high=np.array([1.0, 1.0], dtype=np.float32),
                 dtype=np.float32
             ),
             'obstacles': spaces.Box(
-                low=np.array([[0.0, 0.0] for _ in range(N_OBSTACLES)]),
-                high=np.array([[1.0, 1.0] for _ in range(N_OBSTACLES)]),
+                low=np.array([[0.0, 0.0] for _ in range(N_OBSTACLES)], dtype=np.float32),
+                high=np.array([[1.0, 1.0] for _ in range(N_OBSTACLES)], dtype=np.float32),
                 shape=(N_OBSTACLES, 2),
                 dtype=np.float32
             ),
             'threat_zones': spaces.Box(
-                low=np.array([[0.0, 0.0, 0.0, 0.0] for _ in range(N_THREAT_ZONES)]),
-                high=np.array([[1.0, 1.0, 1.0, 1.0] for _ in range(N_THREAT_ZONES)]),
+                low=np.array([[0.0, 0.0, 0.0, 0.0] for _ in range(N_THREAT_ZONES)], dtype=np.float32),
+                high=np.array([[1.0, 1.0, 1.0, 1.0] for _ in range(N_THREAT_ZONES)], dtype=np.float32),
                 shape=(N_THREAT_ZONES, 4),
                 dtype=np.float32
-             )
+            )
         })
         
         self.visualizer = ASVVisualizer()
@@ -69,10 +69,10 @@ class ASVEnvironment(gym.Env):
         while True:
             goal_x = self.np_random.uniform(-ENV_WIDTH/2, ENV_WIDTH/2)
             goal_y = self.np_random.uniform(-ENV_HEIGHT/2, ENV_HEIGHT/2)
-            self.goal = np.array([goal_x, goal_y])
+            self.goal = np.array([goal_x, goal_y], dtype=np.float32)
             
             # Ensure goal is not too close to starting area
-            if np.linalg.norm(self.goal) > 15.0:  # Keep goal away from center
+            if np.linalg.norm(self.goal) > 40.0:  # Keep goal away from center
                 break
         
         # Generate random obstacles
@@ -85,8 +85,8 @@ class ASVEnvironment(gym.Env):
                 
                 # Check if obstacle overlaps with goal or starting area
                 obstacle_pos = np.array([x, y])
-                if (np.linalg.norm(obstacle_pos - self.goal) > radius + 7.0 and  # Clear of goal
-                    np.linalg.norm(obstacle_pos) > radius + 7.0):                 # Clear of start
+                if (np.linalg.norm(obstacle_pos - self.goal) > radius + 10.0 and  # Clear of goal
+                    np.linalg.norm(obstacle_pos) > radius + 10.0):                 # Clear of start
                     self.obstacles.append([x, y, radius])
                     break
         
@@ -100,8 +100,8 @@ class ASVEnvironment(gym.Env):
                 height = self.np_random.uniform(10.0, 20.0)
                 
                 # Check if threat zone overlaps with goal or starting area
-                if (abs(x - self.goal[0]) > width/2 + 7.0 and abs(y - self.goal[1]) > height/2 + 7.0 and
-                    abs(x) > width/2 + 7.0 and abs(y) > height/2 + 7.0):
+                if (abs(x - self.goal[0]) > width/2 + 10.0 and abs(y - self.goal[1]) > height/2 + 10.0 and
+                    abs(x) > width/2 + 10.0 and abs(y) > height/2 + 10.0):
                     self.threat_zones.append([x, y, width, height])
                     break
         
@@ -109,15 +109,14 @@ class ASVEnvironment(gym.Env):
         start_x = self.np_random.uniform(-5.0, 5.0)
         start_y = self.np_random.uniform(-5.0, 5.0)
         
-        # Completely random initial heading between -pi and pi
-        random_heading = self.np_random.uniform(-np.pi, np.pi)
-        # goal_direction = np.arctan2(self.goal[1] - start_y, self.goal[0] - start_x)
-        #random_heading = goal_direction + self.np_random.uniform(-np.pi/6, np.pi/6)  # ±30 degrees
+        # Start with heading roughly toward goal
+        goal_direction = np.arctan2(self.goal[1] - start_y, self.goal[0] - start_x)
+        random_heading = goal_direction + self.np_random.uniform(-np.pi/4, np.pi/4)  # ±45 degrees
         
         # Start with small positive speed
-        # initial_speed = self.np_random.uniform(1.0, 3.0)  # Always moving
+        initial_speed = 2.0  # Always start moving
         
-        self.state = np.array([start_x, start_y, random_heading, 0.0, 0.0])
+        self.state = np.array([start_x, start_y, random_heading, initial_speed, 0.0], dtype=np.float32)
         
         # On reset, set last_distance_to_goal to current distance
         distance_to_goal = np.linalg.norm(self.goal - self.state[:2])
@@ -176,8 +175,8 @@ class ASVEnvironment(gym.Env):
         norm_bearing = goal_bearing / np.pi
         
         return {
-            'vessel_state': np.array([norm_x, norm_y, norm_heading, norm_speed, norm_angular_vel]),
-            'goal_info': np.array([norm_distance, norm_bearing])
+            'vessel_state': np.array([norm_x, norm_y, norm_heading, norm_speed, norm_angular_vel], dtype=np.float32),
+            'goal_info': np.array([norm_distance, norm_bearing], dtype=np.float32)
         }
 
     def step(self, action):
@@ -196,8 +195,8 @@ class ASVEnvironment(gym.Env):
         done = False
         truncated = False
 
-        # Scaled model: angular_acceleration proportional to rudder angle and speed
-        angular_acceleration = TURN_RATE_FACTOR * rudder * speed  # rad/s²
+        # Scaled model: angular_acceleration only depends on rudder angle
+        angular_acceleration = TURN_RATE_FACTOR * rudder  # Removed speed dependency
         
         # Update angular velocity and clip to maximum
         angular_velocity += angular_acceleration * dt
@@ -220,24 +219,22 @@ class ASVEnvironment(gym.Env):
 
         reward = 0.0
         distance_to_goal = np.linalg.norm(self.goal - np.array([x, y]))
-        goal_bearing = np.arctan2(self.goal[1] - y, self.goal[0] - x)  # Calculate this first
+        goal_bearing = np.arctan2(self.goal[1] - y, self.goal[0] - x)
 
         if self.last_distance_to_goal is not None:
-            # Simplified reward structure with smaller, stable values
+            # 1. Strong progress reward
+            progress = self.last_distance_to_goal - distance_to_goal
+            reward += progress * 3.0  # Base progress reward
+            
+            # 2. heading reward
             heading_diff = abs(np.mod(goal_bearing - heading + np.pi, 2*np.pi) - np.pi)
             
-            # 1. Primary reward: Getting closer to goal
-            progress = self.last_distance_to_goal - distance_to_goal
-            reward += progress * 2.0
+            # Stronger rewards for good heading
+            if heading_diff < np.pi/6:  # Within 30 degrees
+                reward += 2.0
+            elif heading_diff > np.pi/2:  # More than 90 degrees off
+                reward -= 2.0
             
-            # 2. Secondary reward: Being pointed at goal
-            if heading_diff < np.pi/4:  # Within 45 degrees of goal
-                reward += 1.0  # Small fixed bonus for good alignment
-            
-            # 3. Small penalty for being pointed away
-            if heading_diff > np.pi/2:  # More than 90 degrees off
-                reward -= 0.5  # Small penalty
-        
         self.last_distance_to_goal = distance_to_goal
 
         # Get normalized observations first
@@ -261,7 +258,7 @@ class ASVEnvironment(gym.Env):
         # Obstacle collision check
         for i, (distance, radius) in enumerate(obstacle_obs):
             if distance < radius:  # Collision occurred
-                reward -= 5.0
+                reward -= 25.0
                 truncated = True
                 logger.warning(f"Collision with obstacle {i+1} at position ({self.obstacles[i][0]:.1f}, {self.obstacles[i][1]:.1f})")
                 return observation, reward, done, truncated, {}
@@ -269,29 +266,32 @@ class ASVEnvironment(gym.Env):
         # Threat zone check
         for i, (distance, _, _, is_inside) in enumerate(threat_zone_obs):
             if is_inside > 0.5:  # Inside threat zone (is_inside is a float)
-                reward -= 10.0
+                reward -= 50.0
                 truncated = True
                 logger.warning(f"Entered threat zone {i+1} at position ({x:.1f}, {y:.1f})")
                 return observation, reward, done, truncated, {}
 
         # Success check
         if distance_to_goal < 5.0:
-            reward += 10.0
+            reward += 100.0
             done = True
             logger.info(f"Successfully reached goal at position ({x:.1f}, {y:.1f})")
         
         # Out of bounds check
         if abs(x) > ENV_WIDTH/2 or abs(y) > ENV_HEIGHT/2:
-            reward -= 5.0
+            reward -= 25.0
             truncated = True
             logger.warning(f"Out of bounds at position ({x:.2f}, {y:.2f})")
         
+        # Clip rewards to reasonable range
+        # reward = np.clip(reward, -20.0, 20.0)  # Increased from ±10 to ±20
+
         return observation, reward, done, truncated, {}
         
 
     def _get_obstacle_observations(self):
         """Convert obstacle positions to distance observations"""
-        obstacle_obs = np.zeros((N_OBSTACLES, 2))
+        obstacle_obs = np.zeros((N_OBSTACLES, 2), dtype=np.float32)
         
         x, y, _ = self.state[:3]
         vessel_pos = np.array([x, y])
@@ -308,8 +308,8 @@ class ASVEnvironment(gym.Env):
         return obstacle_obs
     
     def _get_threat_zone_observations(self):
-        """Convert threat zone positions to distance observations and check for violations"""
-        threat_zone_obs = np.zeros((N_THREAT_ZONES, 4))  # [distance, width, height, is_inside]
+        """Convert threat zone positions to distance observations"""
+        threat_zone_obs = np.zeros((N_THREAT_ZONES, 4), dtype=np.float32)
         
         x, y, _ = self.state[:3]
         vessel_pos = np.array([x, y])

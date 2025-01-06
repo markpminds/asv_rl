@@ -3,9 +3,10 @@ import torch
 from time import time
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from environment import ASVEnvironment
-from config import setup_logger, DEFAULT_SEED
+from config import setup_logger, DEFAULT_SEED, N_ENVS
 
 # Setup logging
 logger = setup_logger('ASV_Training')
@@ -18,6 +19,13 @@ else:
     device = torch.device("cpu")
     logger.info("MPS not available, using CPU")
 
+def make_env(seed=None):
+    """Helper function to create an environment"""
+    def _init():
+        env = ASVEnvironment(seed=seed)
+        return env
+    return _init
+
 def train_model(seed=DEFAULT_SEED):
     # Set seeds for all sources of randomness
     np.random.seed(seed)
@@ -25,28 +33,28 @@ def train_model(seed=DEFAULT_SEED):
     if torch.backends.mps.is_available():
         torch.mps.manual_seed(seed)
     
-    # Create environment with seed
-    env = ASVEnvironment(seed=seed)
+    # Create multiple environments for parallel training
+    env = SubprocVecEnv([make_env(seed + i) for i in range(N_ENVS)])
     
     # Create the SAC model with seed
     model = SAC(
         "MultiInputPolicy",
         env,
         learning_rate=3e-4,
-        buffer_size=1000000,
+        buffer_size=1_000_000,
         batch_size=256,
-        tau=0.005,
-        gamma=0.98,
+        tau=0.002,
+        gamma=0.99,
         ent_coef='auto',
-        train_freq=1,
+        train_freq=4,
         gradient_steps=1,
-        learning_starts=10000,
+        learning_starts=100_000,
         policy_kwargs=dict(
             net_arch=dict(
                 pi=[256, 256],
                 qf=[256, 256]
             ),
-            log_std_init=-2,
+            log_std_init=-3,
         ),
         verbose=1,
         device=device,
@@ -55,13 +63,13 @@ def train_model(seed=DEFAULT_SEED):
     
     # Setup checkpointing
     checkpoint_callback = CheckpointCallback(
-        save_freq=50000,
+        save_freq=100000,      # Increased from 50000
         save_path="./logs/",
         name_prefix="sac_asv"
     )
     
     # Train the model
-    total_timesteps = 1_000_000
+    total_timesteps = 20_000_000
     logger.info(f"Starting training for {total_timesteps} timesteps...")
 
     start_time = time()

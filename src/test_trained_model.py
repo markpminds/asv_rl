@@ -1,4 +1,3 @@
-import numpy as np
 from stable_baselines3 import SAC
 from environment import ASVEnvironment
 from config import setup_logger, DEFAULT_SEED
@@ -8,14 +7,14 @@ import time
 # Setup logging
 logger = setup_logger('ASV_Testing')
 
-def test_trained_model(episodes=1, seed=DEFAULT_SEED):
+def test_trained_model(episodes=1, seed=43):
     """Test the trained model for multiple episodes"""
     
     # Create environment with same seed
     env = ASVEnvironment(seed=seed)
     
     # Load the trained model
-    model = SAC.load("models/prelim_sac/sac_asv")
+    model = SAC.load("models/v7/sac_asv")
     
     for episode in range(episodes):
         logger.info(f"\nStarting Episode {episode + 1}")

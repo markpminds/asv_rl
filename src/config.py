@@ -8,43 +8,11 @@ N_OBSTACLES = 4
 N_THREAT_ZONES = 3
 
 MAX_SPEED = 10.0
-MAX_ANGULAR_VELOCITY = np.pi/4  
-TURN_RATE_FACTOR = 0.05 
+MAX_ANGULAR_VELOCITY = np.pi/6  # Reduced from π/4 for less aggressive turns
+TURN_RATE_FACTOR = 0.1  # Reduced from 0.2 for more gradual turning
 
 DEFAULT_SEED = 42
-
-# Original configuration (commented out)
-"""
-# Environment dimensions
-# ENV_WIDTH = 200
-# ENV_HEIGHT = 200
-
-# GOAL = [75, 50]
-
-# Obstacles configuration
-# OBSTACLES = [
-#     # [x, y, radius]
-#     [50, 50, 10],
-#     [50, -50, 10],
-#     [-50, 50, 10],
-#     [-50, -50, 10]
-# ]
-
-# Vessel dynamics
-# MAX_SPEED = 18.0  # meters/second
-# MAX_ANGULAR_VELOCITY = np.pi/2  # radians/second
-# TURN_RATE_FACTOR = 0.1  # reduced from 0.2 to make turning slower
-
-# Threat Zones configuration
-# THREAT_ZONES = [
-#     # [center_x, center_y, width, height]
-#     [-20, 20, 10, 20],
-#     [30, -40, 25, 15],
-#     [-60, -30, 20, 20],
-#     [20, 60, 10, 30]
-# ]
-"""
-
+N_ENVS = 8
 # Logging configuration
 def setup_logger(name):
     logger = logging.getLogger(name)
