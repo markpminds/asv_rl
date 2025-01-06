@@ -59,7 +59,7 @@ def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_S
         import json
         with open(metadata_path) as f:
             metadata = json.load(f)
-            logger.info(f"Model trained with:")
+            logger.info("Model trained with:")
             logger.info(f"Git commit: {metadata.get('git', {}).get('commit')}")
             logger.info(f"Branch: {metadata.get('git', {}).get('branch')}")
     
