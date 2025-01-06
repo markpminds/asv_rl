@@ -13,7 +13,7 @@ from config import (
     TURN_RATE_FACTOR,
     setup_logger
 )
-from visualization import ASVVisualizer
+from my_gymnasium.visualization import ASVVisualizer
 
 logger = setup_logger('ASV_Environment')
 
@@ -24,8 +24,8 @@ class ASVEnvironment(gym.Env):
         self.np_random, _ = gym.utils.seeding.np_random(seed)
         
         self.action_space = spaces.Box(
-            low=np.array([0.0, -np.pi/8], dtype=np.float32),
-            high=np.array([1.0, np.pi/8], dtype=np.float32),
+            low=np.array([0.0, -np.pi/8], dtype=np.float32),  # throttle, rudder
+            high=np.array([1.0, np.pi/8], dtype=np.float32),  # throttle, rudder
             dtype=np.float32
         )
         
@@ -256,6 +256,7 @@ class ASVEnvironment(gym.Env):
 
         # Check for collisions and threat zone violations
         # Obstacle collision check
+        """
         for i, (distance, radius) in enumerate(obstacle_obs):
             if distance < radius:  # Collision occurred
                 reward -= 25.0
@@ -270,6 +271,8 @@ class ASVEnvironment(gym.Env):
                 truncated = True
                 logger.warning(f"Entered threat zone {i+1} at position ({x:.1f}, {y:.1f})")
                 return observation, reward, done, truncated, {}
+        
+        """
 
         # Success check
         if distance_to_goal < 5.0:
@@ -282,9 +285,6 @@ class ASVEnvironment(gym.Env):
             reward -= 25.0
             truncated = True
             logger.warning(f"Out of bounds at position ({x:.2f}, {y:.2f})")
-        
-        # Clip rewards to reasonable range
-        # reward = np.clip(reward, -20.0, 20.0)  # Increased from ±10 to ±20
 
         return observation, reward, done, truncated, {}
         

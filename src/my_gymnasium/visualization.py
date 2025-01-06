@@ -4,9 +4,15 @@ import matplotlib.image as mpimg
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import numpy as np
 from config import ENV_WIDTH, ENV_HEIGHT
+import os
+from pathlib import Path
 
-Corsair = mpimg.imread("/Users/markprettyman/Desktop/asv_rl/src/images/Corsair.png")
-Containership = mpimg.imread("/Users/markprettyman/Desktop/asv_rl/src/images/Containership.png")
+# Get the src directory path
+SRC_DIR = Path(__file__).parent
+
+# Load images using relative paths
+Corsair = mpimg.imread(os.path.join(SRC_DIR, "images", "Corsair.png"))
+Containership = mpimg.imread(os.path.join(SRC_DIR, "images", "Containership.png"))
 
 
 class ASVVisualizer:

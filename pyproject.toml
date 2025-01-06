@@ -18,6 +18,7 @@ tensorboard = "^2.18.0"
 torch = "^2.2.0"
 tqdm = "^4.67.1"
 rich = "^13.9.4"
+wandb = "^0.19.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

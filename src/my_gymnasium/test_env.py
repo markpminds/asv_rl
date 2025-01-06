@@ -1,5 +1,5 @@
 import numpy as np
-from environment import ASVEnvironment
+from environment_sac import ASVEnvironment
 from config import setup_logger
 import time
 import matplotlib.pyplot as plt

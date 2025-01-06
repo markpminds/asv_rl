@@ -39,3 +39,13 @@ models/
 logs/
 *.log 
 src/.DS_Store
+
+images/
+pres_images/
+
+# Ruff cache
+.ruff_cache/
+
+# Weights & Biases
+wandb/
+artifacts/
