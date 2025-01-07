@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import os
 from time import time
 from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -34,7 +35,6 @@ def train_model(seed=DEFAULT_SEED):
         project="asv-navigation",
         name="sac_simplified_rewards",
         monitor_gym=True,
-        sync_tensorboard=True,
         config={
             "model_type": "sac",
             "training_timesteps": TRAIN_TIMESTEPS,
@@ -60,6 +60,9 @@ def train_model(seed=DEFAULT_SEED):
         }
     )
     
+    # Get the wandb run path which includes timestamp
+    run_path = wandb.run.dir
+    
     # Set seeds for all sources of randomness
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -82,7 +85,7 @@ def train_model(seed=DEFAULT_SEED):
         train_freq=4,
         gradient_steps=1,
         learning_starts=int(TRAIN_TIMESTEPS/20),
-        tensorboard_log=f"wandb/{wandb.run.id}/tensorboard",
+        tensorboard_log=os.path.join(run_path, "tensorboard"),
         policy_kwargs=dict(
             net_arch=dict(
                 pi=[256, 256, 128],
@@ -114,7 +117,16 @@ def train_model(seed=DEFAULT_SEED):
     logger.info(f"Training completed in {training_time/60:.2f} minutes")
     logger.info(f"Average speed: {TRAIN_TIMESTEPS/training_time:.2f} timesteps/second")
 
-    # Save final model
+    # Save final model in the wandb run directory
+    model_save_path = os.path.join(run_path, "model")
+    model.save(model_save_path)
+    logger.info(f"Model saved to {model_save_path}")
+    
+    # Log the model as a wandb artifact
+    artifact = wandb.Artifact(f'sac_model_{wandb.run.id}', type='model')
+    artifact.add_file(model_save_path)
+    wandb.log_artifact(artifact)
+
     wandb.finish()
 
 if __name__ == "__main__":

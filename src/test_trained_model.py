@@ -2,6 +2,7 @@ from stable_baselines3 import SAC, PPO
 import argparse
 import wandb
 from pathlib import Path
+import glob
 from my_gymnasium.environment import ASVEnvironment
 from config import setup_logger, DEFAULT_SEED
 import matplotlib.pyplot as plt
@@ -20,32 +21,39 @@ def get_model_class(model_type):
         raise ValueError(f"Unsupported model type: {model_type}. Supported types: {list(model_types.keys())}")
     return model_types[model_type.lower()]
 
+def find_full_run_path(short_run_id):
+    """Find the full run directory path from the short run ID"""
+    possible_paths = glob.glob(f"wandb/run-*-{short_run_id}")
+    if not possible_paths:
+        raise FileNotFoundError(f"No run directory found for run ID {short_run_id}")
+    if len(possible_paths) > 1:
+        logger.warning(f"Multiple run directories found for {short_run_id}, using most recent")
+        # Sort by creation time and take the most recent
+        return sorted(possible_paths, key=lambda x: Path(x).stat().st_ctime)[-1]
+    return possible_paths[0]
+
 def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_SEED):
     """Test the trained model for multiple episodes"""
     
     # Create environment with same seed
     env = ASVEnvironment(seed=seed)
     
+    # Find the full run path from the short run ID
+    try:
+        full_run_path = find_full_run_path(run_id)
+        logger.info(f"Found run directory: {full_run_path}")
+    except FileNotFoundError as e:
+        logger.error(str(e))
+        return
+    
     # Initialize wandb in offline mode (just for loading model)
     wandb.init(project="asv-navigation", id=run_id, resume="allow")
     
-    # Get the run's files
-    run = wandb.run
-    if not run:
-        raise ValueError(f"Could not find wandb run with id {run_id}")
-        
-    # Find the latest model file in the run
-    model_files = [f for f in run.files() if f.name.endswith('.zip')]
-    if not model_files:
-        raise FileNotFoundError(f"No model files found in run {run_id}")
-    
-    # Sort by timestamp and get latest
-    latest_model = sorted(model_files, key=lambda x: x.updated_at)[-1]
-    
-    # Download the model file
-    model_path = Path("wandb") / run.id / "files" / latest_model.name
+    # Look for the model file directly in the run directory
+    model_path = Path(full_run_path) / "files" / "model.zip"
     if not model_path.exists():
-        latest_model.download(root="wandb", replace=True)
+        logger.error(f"Model file not found at expected path: {model_path}")
+        return
     
     # Load the appropriate model type
     ModelClass = get_model_class(model_type)
@@ -54,7 +62,7 @@ def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_S
     logger.info(f"Testing {model_type.upper()} model from run {run_id}")
     
     # Get git info from metadata
-    metadata_path = Path("wandb") / run_id / "files" / "wandb-metadata.json"
+    metadata_path = Path(full_run_path) / "files" / "wandb-metadata.json"
     if metadata_path.exists():
         import json
         with open(metadata_path) as f:
@@ -101,7 +109,7 @@ if __name__ == "__main__":
     parser.add_argument('--model-type', type=str, default='sac',
                       help='Type of model to test (sac, ppo)')
     parser.add_argument('--run-id', type=str, required=True,
-                      help='Wandb run ID to load model from')
+                      help='Short Wandb run ID (e.g., 1d9n4yxh)')
     parser.add_argument('--episodes', type=int, default=1,
                       help='Number of episodes to run')
     parser.add_argument('--seed', type=int, default=DEFAULT_SEED,

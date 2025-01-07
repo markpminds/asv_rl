@@ -32,7 +32,7 @@ class ASVEnvironment(gym.Env):
             dtype=np.float32
         )
         
-        # Normalize observation spaces to reasonable ranges
+        # Simplified observation space without obstacles and threat zones
         self.observation_space = spaces.Dict({
             # Vessel state - normalized values
             'vessel_state': spaces.Box(
@@ -45,19 +45,19 @@ class ASVEnvironment(gym.Env):
                 low=np.array([0.0, -1.0], dtype=np.float32),
                 high=np.array([1.0, 1.0], dtype=np.float32),
                 dtype=np.float32
-            ),
-            'obstacles': spaces.Box(
-                low=np.array([[0.0, 0.0] for _ in range(N_OBSTACLES)], dtype=np.float32),
-                high=np.array([[1.0, 1.0] for _ in range(N_OBSTACLES)], dtype=np.float32),
-                shape=(N_OBSTACLES, 2),
-                dtype=np.float32
-            ),
-            'threat_zones': spaces.Box(
-                low=np.array([[0.0, 0.0, 0.0, 0.0] for _ in range(N_THREAT_ZONES)], dtype=np.float32),
-                high=np.array([[1.0, 1.0, 1.0, 1.0] for _ in range(N_THREAT_ZONES)], dtype=np.float32),
-                shape=(N_THREAT_ZONES, 4),
-                dtype=np.float32
             )
+            # 'obstacles': spaces.Box(
+            #     low=np.array([[0.0, 0.0] for _ in range(N_OBSTACLES)], dtype=np.float32),
+            #     high=np.array([[1.0, 1.0] for _ in range(N_OBSTACLES)], dtype=np.float32),
+            #     shape=(N_OBSTACLES, 2),
+            #     dtype=np.float32
+            # ),
+            # 'threat_zones': spaces.Box(
+            #     low=np.array([[0.0, 0.0, 0.0, 0.0] for _ in range(N_THREAT_ZONES)], dtype=np.float32),
+            #     high=np.array([[1.0, 1.0, 1.0, 1.0] for _ in range(N_THREAT_ZONES)], dtype=np.float32),
+            #     shape=(N_THREAT_ZONES, 4),
+            #     dtype=np.float32
+            # )
         })
         
         self.visualizer = ASVVisualizer()
@@ -78,35 +78,35 @@ class ASVEnvironment(gym.Env):
             if np.linalg.norm(self.goal) > 40.0:  # Keep goal away from center
                 break
         
-        # Generate random obstacles
-        self.obstacles = []
-        for _ in range(N_OBSTACLES):  # Use constant from config
-            while True:
-                x = self.np_random.uniform(-ENV_WIDTH/2 * 0.8, ENV_WIDTH/2 * 0.8)
-                y = self.np_random.uniform(-ENV_HEIGHT/2 * 0.8, ENV_HEIGHT/2 * 0.8)
-                radius = self.np_random.uniform(3.0, 7.0)
-                
-                # Check if obstacle overlaps with goal or starting area
-                obstacle_pos = np.array([x, y])
-                if (np.linalg.norm(obstacle_pos - self.goal) > radius + 10.0 and  # Clear of goal
-                    np.linalg.norm(obstacle_pos) > radius + 10.0):                 # Clear of start
-                    self.obstacles.append([x, y, radius])
-                    break
+        # # Generate random obstacles
+        # self.obstacles = []
+        # for _ in range(N_OBSTACLES):  # Use constant from config
+        #     while True:
+        #         x = self.np_random.uniform(-ENV_WIDTH/2 * 0.8, ENV_WIDTH/2 * 0.8)
+        #         y = self.np_random.uniform(-ENV_HEIGHT/2 * 0.8, ENV_HEIGHT/2 * 0.8)
+        #         radius = self.np_random.uniform(3.0, 7.0)
+        #         
+        #         # Check if obstacle overlaps with goal or starting area
+        #         obstacle_pos = np.array([x, y])
+        #         if (np.linalg.norm(obstacle_pos - self.goal) > radius + 10.0 and  # Clear of goal
+        #             np.linalg.norm(obstacle_pos) > radius + 10.0):                 # Clear of start
+        #             self.obstacles.append([x, y, radius])
+        #             break
         
-        # Generate random threat zones
-        self.threat_zones = []
-        for _ in range(N_THREAT_ZONES):  # Use constant from config
-            while True:
-                x = self.np_random.uniform(-ENV_WIDTH/2 * 0.8, ENV_WIDTH/2 * 0.8)
-                y = self.np_random.uniform(-ENV_HEIGHT/2 * 0.8, ENV_HEIGHT/2 * 0.8)
-                width = self.np_random.uniform(10.0, 20.0)
-                height = self.np_random.uniform(10.0, 20.0)
-                
-                # Check if threat zone overlaps with goal or starting area
-                if (abs(x - self.goal[0]) > width/2 + 10.0 and abs(y - self.goal[1]) > height/2 + 10.0 and
-                    abs(x) > width/2 + 10.0 and abs(y) > height/2 + 10.0):
-                    self.threat_zones.append([x, y, width, height])
-                    break
+        # # Generate random threat zones
+        # self.threat_zones = []
+        # for _ in range(N_THREAT_ZONES):  # Use constant from config
+        #     while True:
+        #         x = self.np_random.uniform(-ENV_WIDTH/2 * 0.8, ENV_WIDTH/2 * 0.8)
+        #         y = self.np_random.uniform(-ENV_HEIGHT/2 * 0.8, ENV_HEIGHT/2 * 0.8)
+        #         width = self.np_random.uniform(10.0, 20.0)
+        #         height = self.np_random.uniform(10.0, 20.0)
+        #         
+        #         # Check if threat zone overlaps with goal or starting area
+        #         if (abs(x - self.goal[0]) > width/2 + 10.0 and abs(y - self.goal[1]) > height/2 + 10.0 and
+        #             abs(x) > width/2 + 10.0 and abs(y) > height/2 + 10.0):
+        #             self.threat_zones.append([x, y, width, height])
+        #             break
         
         # Start closer to center
         start_x = self.np_random.uniform(-5.0, 5.0)
@@ -135,8 +135,8 @@ class ASVEnvironment(gym.Env):
                 distance_to_goal,
                 np.arctan2(self.goal[1], self.goal[0])
             ]),
-            'obstacles': self._get_obstacle_observations(),
-            'threat_zones': self._get_threat_zone_observations()
+            # 'obstacles': self._get_obstacle_observations(),
+            # 'threat_zones': self._get_threat_zone_observations()
         }
         
         return observation, {}
@@ -150,8 +150,8 @@ class ASVEnvironment(gym.Env):
         
         # Draw everything
         self.visualizer.draw_vessel(x, y, heading)
-        self.visualizer.draw_obstacles(self.obstacles)
-        self.visualizer.draw_threat_zones(self.threat_zones)
+        # self.visualizer.draw_obstacles(self.obstacles)
+        # self.visualizer.draw_threat_zones(self.threat_zones)
         self.visualizer.draw_goal(*self.goal)
         self.visualizer.render() 
         
@@ -288,15 +288,8 @@ class ASVEnvironment(gym.Env):
             reward -= 25.0
             truncated = True
             logger.warning(f"Out of bounds at position ({x:.2f}, {y:.2f})")
-
-        info = {
-            'distance_to_goal': distance_to_goal,
-            'heading_error': heading_diff,
-            'speed': speed,
-            'is_success': done  # True if reached goal
-        }
         
-        return observation, reward, done, truncated, info
+        return observation, reward, done, truncated, {}
         
 
     def _get_obstacle_observations(self):

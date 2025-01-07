@@ -19,12 +19,12 @@ def test_environment():
     logger.info(f"Vessel Position: ({actual_x:.2f}, {actual_y:.2f})")  # Use actual state values
     logger.info(f"Vessel Heading: {env.state[2]:.2f}")  # Actual heading in radians
     logger.info(f"Goal Position: ({env.goal[0]:.2f}, {env.goal[1]:.2f})")
-    logger.info("Obstacles:")
-    for i, obs in enumerate(env.obstacles):
-        logger.info(f"Obstacle {i+1}: position ({obs[0]:.2f}, {obs[1]:.2f}), radius {obs[2]:.2f}")
-    logger.info("Threat Zones:")
-    for i, zone in enumerate(env.threat_zones):
-        logger.info(f"Zone {i+1}: center ({zone[0]:.2f}, {zone[1]:.2f}), width {zone[2]:.2f}, height {zone[3]:.2f}")
+    # logger.info("Obstacles:")
+    # for i, obs in enumerate(env.obstacles):
+    #    logger.info(f"Obstacle {i+1}: position ({obs[0]:.2f}, {obs[1]:.2f}), radius {obs[2]:.2f}")
+    #logger.info("Threat Zones:")
+    #for i, zone in enumerate(env.threat_zones):
+    #    logger.info(f"Zone {i+1}: center ({zone[0]:.2f}, {zone[1]:.2f}), width {zone[2]:.2f}, height {zone[3]:.2f}")
 
     # Visualize environment
     logger.info("Displaying environment visualization...")
