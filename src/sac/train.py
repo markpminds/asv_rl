@@ -30,10 +30,11 @@ def make_env(seed=None):
     return _init
 
 def train_model(seed=DEFAULT_SEED):
-    # Initialize wandb with descriptive name
     wandb.init(
         project="asv-navigation",
-        name="sac_simplified_rewards",  # Descriptive name instead of version number
+        name="sac_simplified_rewards",
+        monitor_gym=True,
+        sync_tensorboard=True,
         config={
             "model_type": "sac",
             "training_timesteps": TRAIN_TIMESTEPS,
@@ -81,12 +82,12 @@ def train_model(seed=DEFAULT_SEED):
         train_freq=4,
         gradient_steps=1,
         learning_starts=int(TRAIN_TIMESTEPS/20),
+        tensorboard_log=f"wandb/{wandb.run.id}/tensorboard",
         policy_kwargs=dict(
             net_arch=dict(
-                pi=[256, 256],
-                qf=[256, 256]
-            ),
-            log_std_init=-3,
+                pi=[256, 256, 128],
+                qf=[256, 256, 128]
+            )
         ),
         verbose=1,
         device=device,
@@ -96,7 +97,6 @@ def train_model(seed=DEFAULT_SEED):
     # Setup checkpointing
     wandb_callback = WandbCallback(
         gradient_save_freq=int(TRAIN_TIMESTEPS/10),
-        model_save_path=str(wandb.run.id),
         verbose=2,
     )
     

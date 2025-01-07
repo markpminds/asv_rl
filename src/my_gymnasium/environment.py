@@ -247,14 +247,14 @@ class ASVEnvironment(gym.Env):
         )
         
         # Get obstacle and threat zone observations
-        obstacle_obs = self._get_obstacle_observations()
-        threat_zone_obs = self._get_threat_zone_observations()
+        # obstacle_obs = self._get_obstacle_observations()
+        # threat_zone_obs = self._get_threat_zone_observations()
         
         # Combine all observations
         observation = {
             **normalized_obs,
-            'obstacles': obstacle_obs,
-            'threat_zones': threat_zone_obs
+            #'obstacles': obstacle_obs,
+            #'threat_zones': threat_zone_obs
         }
 
         # Check for collisions and threat zone violations
@@ -289,7 +289,14 @@ class ASVEnvironment(gym.Env):
             truncated = True
             logger.warning(f"Out of bounds at position ({x:.2f}, {y:.2f})")
 
-        return observation, reward, done, truncated, {}
+        info = {
+            'distance_to_goal': distance_to_goal,
+            'heading_error': heading_diff,
+            'speed': speed,
+            'is_success': done  # True if reached goal
+        }
+        
+        return observation, reward, done, truncated, info
         
 
     def _get_obstacle_observations(self):
