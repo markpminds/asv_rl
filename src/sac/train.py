@@ -5,7 +5,6 @@ from time import time
 from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
 import wandb
-from wandb.integration.sb3 import WandbCallback
 
 from my_gymnasium.environment import ASVEnvironment
 from config import (
@@ -20,7 +19,7 @@ from config import (
 # Setup logging
 logger = setup_logger('SAC_Training')
 
-TRAIN_TIMESTEPS = 1_000_000
+TRAIN_TIMESTEPS = 100_000
 
 
 def make_env(seed=None):
@@ -35,6 +34,7 @@ def train_model(seed=DEFAULT_SEED):
         project="asv-navigation",
         name="sac_simplified_rewards",
         monitor_gym=True,
+        sync_tensorboard=True,
         config={
             "model_type": "sac",
             "training_timesteps": TRAIN_TIMESTEPS,
@@ -72,6 +72,8 @@ def train_model(seed=DEFAULT_SEED):
     # Create multiple environments for parallel training
     env = SubprocVecEnv([make_env(seed + i) for i in range(N_ENVS)])
     
+
+    tensorboard_path = os.path.join(run_path, "logs")
     # Create the SAC model
     model = SAC(
         "MultiInputPolicy",
@@ -85,7 +87,6 @@ def train_model(seed=DEFAULT_SEED):
         train_freq=4,
         gradient_steps=1,
         learning_starts=int(TRAIN_TIMESTEPS/20),
-        tensorboard_log=os.path.join(run_path, "tensorboard"),
         policy_kwargs=dict(
             net_arch=dict(
                 pi=[256, 256, 128],
@@ -94,13 +95,8 @@ def train_model(seed=DEFAULT_SEED):
         ),
         verbose=1,
         device=device,
-        seed=seed
-    )
-    
-    # Setup checkpointing
-    wandb_callback = WandbCallback(
-        gradient_save_freq=int(TRAIN_TIMESTEPS/10),
-        verbose=2,
+        seed=seed,
+        tensorboard_log=tensorboard_path,
     )
     
     # Train the model
@@ -109,7 +105,6 @@ def train_model(seed=DEFAULT_SEED):
     start_time = time()
     model.learn(
         total_timesteps=TRAIN_TIMESTEPS,
-        callback=[wandb_callback],
         progress_bar=True
     )
     training_time = time() - start_time
@@ -117,14 +112,14 @@ def train_model(seed=DEFAULT_SEED):
     logger.info(f"Training completed in {training_time/60:.2f} minutes")
     logger.info(f"Average speed: {TRAIN_TIMESTEPS/training_time:.2f} timesteps/second")
 
-    # Save final model in the wandb run directory
-    model_save_path = os.path.join(run_path, "model")
+    # Save the final model
+    model_save_path = os.path.join(run_path, "model.zip")
     model.save(model_save_path)
     logger.info(f"Model saved to {model_save_path}")
-    
+
     # Log the model as a wandb artifact
     artifact = wandb.Artifact(f'sac_model_{wandb.run.id}', type='model')
-    artifact.add_file(model_save_path)
+    artifact.add_file(f"{model_save_path}")  # Stable-baselines adds .zip extension
     wandb.log_artifact(artifact)
 
     wandb.finish()
