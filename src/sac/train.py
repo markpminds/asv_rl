@@ -1,10 +1,7 @@
 import numpy as np
 import torch
 from time import time
-import re
-from pathlib import Path
 from stable_baselines3 import SAC
-from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
 import wandb
 from wandb.integration.sb3 import WandbCallback
@@ -24,29 +21,6 @@ logger = setup_logger('SAC_Training')
 
 TRAIN_TIMESTEPS = 1_000_000
 
-def get_next_version() -> int:
-    """Get the next version number by checking existing SAC model directories"""
-    model_dir = Path("models") / "sac"
-    
-    if not model_dir.exists():
-        # First version if directory doesn't exist
-        model_dir.mkdir(parents=True)
-        return 1
-        
-    # List all version directories
-    version_dirs = [d for d in model_dir.iterdir() if d.is_dir() and d.name.startswith('v')]
-    
-    if not version_dirs:
-        return 1
-        
-    # Extract version numbers and find max
-    version_numbers = []
-    for d in version_dirs:
-        match = re.match(r'v(\d+)', d.name)
-        if match:
-            version_numbers.append(int(match.group(1)))
-            
-    return max(version_numbers, default=0) + 1
 
 def make_env(seed=None):
     """Helper function to create an environment"""
@@ -56,18 +30,12 @@ def make_env(seed=None):
     return _init
 
 def train_model(seed=DEFAULT_SEED):
-    # Get next version number
-    version = get_next_version()
-    model_path = Path("models") / "sac" / f"v{version}"
-    model_path.mkdir(parents=True, exist_ok=True)
-    
-    # Initialize wandb
+    # Initialize wandb with descriptive name
     wandb.init(
         project="asv-navigation",
-        name=f"sac_v{version}",
+        name="sac_simplified_rewards",  # Descriptive name instead of version number
         config={
             "model_type": "sac",
-            "version": version,
             "training_timesteps": TRAIN_TIMESTEPS,
             "env_type": "simplified_rewards",
             "reward_structure": {
@@ -126,15 +94,9 @@ def train_model(seed=DEFAULT_SEED):
     )
     
     # Setup checkpointing
-    checkpoint_callback = CheckpointCallback(
-        save_freq=int(TRAIN_TIMESTEPS/10),
-        save_path=str(model_path),
-        name_prefix="sac_asv"
-    )
-    
     wandb_callback = WandbCallback(
         gradient_save_freq=int(TRAIN_TIMESTEPS/10),
-        model_save_path=str(model_path),
+        model_save_path=str(wandb.run.id),
         verbose=2,
     )
     
@@ -144,7 +106,7 @@ def train_model(seed=DEFAULT_SEED):
     start_time = time()
     model.learn(
         total_timesteps=TRAIN_TIMESTEPS,
-        callback=[checkpoint_callback, wandb_callback],
+        callback=[wandb_callback],
         progress_bar=True
     )
     training_time = time() - start_time
@@ -153,9 +115,6 @@ def train_model(seed=DEFAULT_SEED):
     logger.info(f"Average speed: {TRAIN_TIMESTEPS/training_time:.2f} timesteps/second")
 
     # Save final model
-    final_model_path = model_path / "sac_asv"
-    model.save(str(final_model_path))
-    wandb.save(str(final_model_path) + ".zip")
     wandb.finish()
 
 if __name__ == "__main__":
@@ -168,4 +127,3 @@ if __name__ == "__main__":
         logger.info("MPS not available, using CPU")
         
     train_model()
-
