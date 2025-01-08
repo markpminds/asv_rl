@@ -6,6 +6,9 @@ from gymnasium import spaces
 from config import (
     ENV_HEIGHT,
     ENV_WIDTH,
+    DECEL_DISTANCE,
+    DECEL_FACTOR,
+    GOAL_BOX_SIZE,
     N_OBSTACLES,
     N_THREAT_ZONES,
     MAX_ANGULAR_VELOCITY,
@@ -27,8 +30,8 @@ class ASVEnvironment(gym.Env):
         self.np_random, _ = gym.utils.seeding.np_random(seed)
         
         self.action_space = spaces.Box(
-            low=np.array([0.0, -np.pi/8], dtype=np.float32),  # throttle, rudder
-            high=np.array([1.0, np.pi/8], dtype=np.float32),  # throttle, rudder
+            low=np.array([-1.0, -np.pi/4], dtype=np.float32),  # min(throttle), min(rudder)
+            high=np.array([1.0, np.pi/4], dtype=np.float32),   # max(throttle), max(rudder)
             dtype=np.float32
         )
         
@@ -68,30 +71,42 @@ class ASVEnvironment(gym.Env):
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         
-        # Generate random goal first (since obstacles and zones need to avoid it)
-        while True:
-            goal_x = self.np_random.uniform(-ENV_WIDTH/2, ENV_WIDTH/2)
-            goal_y = self.np_random.uniform(-ENV_HEIGHT/2, ENV_HEIGHT/2)
-            self.goal = np.array([goal_x, goal_y], dtype=np.float32)
-            
-            # Ensure goal is not too close to starting area
-            if np.linalg.norm(self.goal) > 40.0:  # Keep goal away from center
-                break
+        # Generate goal on the perimeter of a box (-GOAL_BOX_SIZE to GOAL_BOX_SIZE in x and y)
         
-        # # Generate random obstacles
-        # self.obstacles = []
-        # for _ in range(N_OBSTACLES):  # Use constant from config
-        #     while True:
-        #         x = self.np_random.uniform(-ENV_WIDTH/2 * 0.8, ENV_WIDTH/2 * 0.8)
-        #         y = self.np_random.uniform(-ENV_HEIGHT/2 * 0.8, ENV_HEIGHT/2 * 0.8)
-        #         radius = self.np_random.uniform(3.0, 7.0)
-        #         
-        #         # Check if obstacle overlaps with goal or starting area
-        #         obstacle_pos = np.array([x, y])
-        #         if (np.linalg.norm(obstacle_pos - self.goal) > radius + 10.0 and  # Clear of goal
-        #             np.linalg.norm(obstacle_pos) > radius + 10.0):                 # Clear of start
-        #             self.obstacles.append([x, y, radius])
-        #             break
+        # First decide which side of the box to place the goal on (0: top, 1: right, 2: bottom, 3: left)
+        side = self.np_random.integers(0, 4)
+        
+        if side == 0:  # Top
+            goal_x = self.np_random.uniform(-GOAL_BOX_SIZE, GOAL_BOX_SIZE)
+            goal_y = GOAL_BOX_SIZE
+        elif side == 1:  # Right
+            goal_x = GOAL_BOX_SIZE
+            goal_y = self.np_random.uniform(-GOAL_BOX_SIZE, GOAL_BOX_SIZE)
+        elif side == 2:  # Bottom
+            goal_x = self.np_random.uniform(-GOAL_BOX_SIZE, GOAL_BOX_SIZE)
+            goal_y = -GOAL_BOX_SIZE
+        else:  # Left
+            goal_x = -GOAL_BOX_SIZE
+            goal_y = self.np_random.uniform(-GOAL_BOX_SIZE, GOAL_BOX_SIZE)
+            
+        self.goal = np.array([goal_x, goal_y], dtype=np.float32)
+        
+        # Generate one obstacle between start and goal
+        self.obstacles = []
+        # Calculate a point between start (around origin) and goal
+        obstacle_distance = self.np_random.uniform(0.3, 0.7)  # How far along the path to place obstacle
+        # Since start is near origin, we can use goal position directly
+        obstacle_x = goal_x * obstacle_distance
+        obstacle_y = goal_y * obstacle_distance
+        # Add some random perpendicular offset
+        perpendicular_x = -goal_y / np.linalg.norm(self.goal)  # Normalized perpendicular vector
+        perpendicular_y = goal_x / np.linalg.norm(self.goal)
+        offset = self.np_random.uniform(-5.0, 5.0)
+        obstacle_x += perpendicular_x * offset
+        obstacle_y += perpendicular_y * offset
+        # Add the obstacle with random radius
+        radius = self.np_random.uniform(3.0, 5.0)
+        self.obstacles.append([obstacle_x, obstacle_y, radius])
         
         # # Generate random threat zones
         # self.threat_zones = []
@@ -109,15 +124,14 @@ class ASVEnvironment(gym.Env):
         #             break
         
         # Start closer to center
-        start_x = self.np_random.uniform(-5.0, 5.0)
-        start_y = self.np_random.uniform(-5.0, 5.0)
+        start_x = self.np_random.uniform(-1.0, 1.0)
+        start_y = self.np_random.uniform(-1.0, 1.0)
         
-        # Start with heading roughly toward goal
-        goal_direction = np.arctan2(self.goal[1] - start_y, self.goal[0] - start_x)
-        random_heading = goal_direction + self.np_random.uniform(-np.pi/4, np.pi/4)  # ±45 degrees
+        # Completely random initial heading
+        random_heading = self.np_random.uniform(-np.pi, np.pi)
         
-        # Start with small positive speed
-        initial_speed = 2.0  # Always start moving
+        # Start with zero speed
+        initial_speed = 0.0
         
         self.state = np.array([start_x, start_y, random_heading, initial_speed, 0.0], dtype=np.float32)
         
@@ -182,6 +196,22 @@ class ASVEnvironment(gym.Env):
             'goal_info': np.array([norm_distance, norm_bearing], dtype=np.float32)
         }
 
+    def _heading_reward(self, heading_diff):
+        """
+        Calculate heading reward using a Gaussian-like function:
+        - Returns maximum reward (2.0) when heading_diff is 0
+        - Drops off quickly after pi/4
+        - Returns negative values for heading differences larger than pi/2
+        """
+        sigma = np.pi/6  # Standard deviation of ~30 degrees
+        reward = 2.0 * np.exp(-0.5 * (heading_diff/sigma)**2)  # Gaussian peak at 2.0
+        
+        # Add negative reward for very bad alignments (more than 90 degrees off)
+        if heading_diff > np.pi/2:
+            reward -= 2.0
+            
+        return reward
+
     def step(self, action):
         # Add small random noise to actions
         action_noise = self.np_random.normal(0, 0.05, size=2)  # 5% noise
@@ -192,14 +222,15 @@ class ASVEnvironment(gym.Env):
         throttle, rudder = noisy_action
         x, y, heading, speed, angular_velocity = self.state
         
-        dt = 1  # time step
+        dt = 0.2  # time step
 
         # Initialize done and truncated flags
         done = False
         truncated = False
 
-        # Scaled model: angular_acceleration only depends on rudder angle
-        angular_acceleration = TURN_RATE_FACTOR * rudder  # Removed speed dependency
+        # Make turning less effective at higher speeds (more realistic vessel behavior)
+        turn_effectiveness = 1.0 / (1.0 + (speed / MAX_SPEED))  # Decreases with speed
+        angular_acceleration = TURN_RATE_FACTOR * rudder * turn_effectiveness
         
         # Update angular velocity and clip to maximum
         angular_velocity += angular_acceleration * dt
@@ -209,9 +240,9 @@ class ASVEnvironment(gym.Env):
         heading += angular_velocity * dt
         heading = np.mod(heading + np.pi, 2*np.pi) - np.pi  # keep in [-π, π]
         
-        # Simple acceleration from throttle
+        # Allow for deceleration with negative throttle
         speed += throttle * dt
-        speed = np.clip(speed, 0, MAX_SPEED)
+        speed = np.clip(speed, 0, MAX_SPEED)  # prevent negative speed
         
         # Update position
         x += speed * np.cos(heading) * dt
@@ -224,20 +255,46 @@ class ASVEnvironment(gym.Env):
         distance_to_goal = np.linalg.norm(self.goal - np.array([x, y]))
         goal_bearing = np.arctan2(self.goal[1] - y, self.goal[0] - x)
 
-        if self.last_distance_to_goal is not None:
-            # 1. Strong progress reward
-            progress = self.last_distance_to_goal - distance_to_goal
-            reward += progress * 3.0  # Base progress reward
-            
-            # 2. heading reward
-            heading_diff = abs(np.mod(goal_bearing - heading + np.pi, 2*np.pi) - np.pi)
-            
-            # Stronger rewards for good heading
-            if heading_diff < np.pi/6:  # Within 30 degrees
-                reward += 2.0
-            elif heading_diff > np.pi/2:  # More than 90 degrees off
-                reward -= 2.0
-            
+        # 1. Progress reward
+        progress = self.last_distance_to_goal - distance_to_goal
+        reward += progress
+        
+        # 2. Heading reward using smooth function
+        heading_diff = abs(np.mod(goal_bearing - heading + np.pi, 2*np.pi) - np.pi)
+        heading_reward = self._heading_reward(heading_diff)
+        reward += heading_reward
+
+        # Speed control based on alignment and distance
+        # if heading_reward > 1.0:  # Well aligned
+        #    if distance_to_goal > 20.0 and speed > MAX_SPEED * 0.7:
+        #        reward += 1.0  # Reward high speed when far and aligned
+        #    elif distance_to_goal < 20.0 and speed < MAX_SPEED * 0.5:
+        #        reward += 1.0  # Reward lower speed when close and aligned
+        # elif heading_reward < -1.0:  # Badly aligned
+        #     if speed > MAX_SPEED * 0.5:
+        #        reward -= 1.0  # Penalty for high speed when badly aligned
+        
+        # 3. Speed control rewards
+        # if distance_to_goal < 20.0 and speed > MAX_SPEED * 0.7:
+        #    reward -= 1.0  # Penalty for excessive speed near goal
+        
+        # 3. Speed control reward based on distance to goal
+        # Calculate desired speed using a sigmoid-like function that drops off more sharply
+        # This creates a curve where speed stays high until DECEL_DISTANCE units away, then drops quickly
+        desired_speed = MAX_SPEED * (1.0 / (1.0 + np.exp(-DECEL_FACTOR * (distance_to_goal - DECEL_DISTANCE))))
+        desired_speed = np.clip(desired_speed, 0.0, MAX_SPEED)
+
+        speed_ratio = speed / desired_speed
+        
+        # Calculate speed difference and apply penalties using walrus operator
+        if distance_to_goal < DECEL_DISTANCE:
+            if speed_ratio > 1:
+                reward -= 3.0 * speed_ratio
+            elif speed_ratio < 0.5:
+                reward -= 1.0 * (1 - speed_ratio)
+            else:
+                reward += 2.0 * (1 - speed_ratio)
+
         self.last_distance_to_goal = distance_to_goal
 
         # Get normalized observations first
@@ -278,7 +335,7 @@ class ASVEnvironment(gym.Env):
         """
 
         # Success check
-        if distance_to_goal < 5.0:
+        if distance_to_goal < 3.0:
             reward += 100.0
             done = True
             logger.info(f"Successfully reached goal at position ({x:.1f}, {y:.1f})")

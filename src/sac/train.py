@@ -19,7 +19,7 @@ from config import (
 # Setup logging
 logger = setup_logger('SAC_Training')
 
-TRAIN_TIMESTEPS = 100_000
+TRAIN_TIMESTEPS = 1_000_000
 
 
 def make_env(seed=None):

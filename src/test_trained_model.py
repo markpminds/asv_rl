@@ -1,12 +1,12 @@
 from stable_baselines3 import SAC, PPO
 import argparse
-import wandb
 from pathlib import Path
 import glob
 from my_gymnasium.environment import ASVEnvironment
 from config import setup_logger, DEFAULT_SEED
 import matplotlib.pyplot as plt
 import time
+import os
 
 # Setup logging
 logger = setup_logger('ASV_Testing')
@@ -23,7 +23,9 @@ def get_model_class(model_type):
 
 def find_full_run_path(short_run_id):
     """Find the full run directory path from the short run ID"""
-    possible_paths = glob.glob(f"wandb/run-*-{short_run_id}")
+    # Get the project root directory (one level up from this script)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    possible_paths = glob.glob(os.path.join(project_root, f"wandb/run-*-{short_run_id}"))
     if not possible_paths:
         raise FileNotFoundError(f"No run directory found for run ID {short_run_id}")
     if len(possible_paths) > 1:
@@ -45,9 +47,6 @@ def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_S
     except FileNotFoundError as e:
         logger.error(str(e))
         return
-    
-    # Initialize wandb in offline mode (just for loading model)
-    wandb.init(project="asv-navigation", id=run_id, resume="allow")
     
     # Look for the model file directly in the run directory
     model_path = Path(full_run_path) / "files" / "model.zip"
@@ -75,6 +74,10 @@ def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_S
         logger.info(f"\nStarting Episode {episode + 1}")
         
         obs, _ = env.reset()
+        # Log initial goal position
+        goal_x, goal_y = env.goal
+        logger.info(f"Goal position: ({goal_x:.2f}, {goal_y:.2f})")
+        
         episode_reward = 0
         done = False
         step = 0
@@ -94,9 +97,14 @@ def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_S
             
             # Log state
             x, y = env.state[:2]
-            logger.info(f"Step {step}: Action: {action}, Position: ({x:.2f}, {y:.2f}), Reward: {reward:.2f}")
+            logger.info(
+                f"Step {step}: "
+                f"Action: ({action[0]:.3f}, {action[1]:.3f}), "
+                f"Position: ({x:.2f}, {y:.2f}), "
+                f"Reward: {reward:.2f}"
+            )
             env.render()
-            time.sleep(0.1)
+            time.sleep(0.05)
             step += 1
             
         logger.info(f"Episode {episode + 1} finished after {step} steps. Total reward: {episode_reward:.2f}")

@@ -7,8 +7,13 @@ ENV_HEIGHT = 100
 N_OBSTACLES = 4
 N_THREAT_ZONES = 3
 
-MAX_SPEED = 10.0
-MAX_ANGULAR_VELOCITY = np.pi/6  # Reduced from π/4 for less aggressive turns
+GOAL_BOX_SIZE = 40
+
+DECEL_DISTANCE = 10 # Distance at which to start significant deceleration
+DECEL_FACTOR = 0.2 # Controls how sharply the speed drops
+
+MAX_SPEED = 5.0
+MAX_ANGULAR_VELOCITY = np.pi/8  # Reduced from π/4 for less aggressive turns
 TURN_RATE_FACTOR = 0.1  # Reduced from 0.2 for more gradual turning
 
 DEFAULT_SEED = 42
