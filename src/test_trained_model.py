@@ -2,7 +2,8 @@ from stable_baselines3 import SAC, PPO
 import argparse
 from pathlib import Path
 import glob
-from my_gymnasium.environment import ASVEnvironment
+from my_gymnasium.environment_base import ASVBaseEnvironment
+from my_gymnasium.environment_obs import ASVObsEnvironment
 from config import setup_logger, DEFAULT_SEED
 import matplotlib.pyplot as plt
 import time
@@ -34,11 +35,16 @@ def find_full_run_path(short_run_id):
         return sorted(possible_paths, key=lambda x: Path(x).stat().st_ctime)[-1]
     return possible_paths[0]
 
-def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_SEED):
+def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_SEED, env_type='base'):
     """Test the trained model for multiple episodes"""
     
     # Create environment with same seed
-    env = ASVEnvironment(seed=seed)
+    if env_type == 'base':
+        env = ASVBaseEnvironment(seed=seed)
+    elif env_type == 'obs':
+        env = ASVObsEnvironment(seed=seed)
+    else:
+        raise ValueError(f"Unknown environment type: {env_type}. Must be 'base' or 'obs'")
     
     # Find the full run path from the short run ID
     try:
@@ -88,7 +94,7 @@ def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_S
             
             if done or truncated:
                 if truncated:
-                    logger.warning("Episode truncated - Out of bounds or collision!")
+                    logger.warning("Episode truncated - Out of bounds, collision, or stalling!")
                 elif done:
                     logger.info("Episode completed successfully!")
                 break
@@ -122,6 +128,8 @@ if __name__ == "__main__":
                       help='Number of episodes to run')
     parser.add_argument('--seed', type=int, default=DEFAULT_SEED,
                       help='Random seed')
+    parser.add_argument('--env-type', type=str, choices=['base', 'obs'], default='base',
+                      help='Type of environment to use (base: no obstacles, obs: with obstacles)')
     
     args = parser.parse_args()
     
@@ -129,5 +137,6 @@ if __name__ == "__main__":
         model_type=args.model_type,
         run_id=args.run_id,
         episodes=args.episodes,
-        seed=args.seed
+        seed=args.seed,
+        env_type=args.env_type
     ) 
