@@ -16,7 +16,6 @@ def get_model_class(model_type):
     """Get the model class based on model type string"""
     model_types = {
         'sac': SAC,
-        'ppo': PPO
     }
     if model_type.lower() not in model_types:
         raise ValueError(f"Unsupported model type: {model_type}. Supported types: {list(model_types.keys())}")

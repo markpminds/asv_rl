@@ -12,7 +12,7 @@ GOAL_BOX_SIZE = 40
 DECEL_DISTANCE = 10 # Distance at which to start significant deceleration
 DECEL_FACTOR = 0.2 # Controls how sharply the speed drops
 
-OBSTACLE_AVOIDANCE_ZONE = 3
+OBSTACLE_AVOIDANCE_ZONE = 5
 
 MAX_SPEED = 5.0
 MAX_ANGULAR_VELOCITY = np.pi/8  # Reduced from π/4 for less aggressive turns

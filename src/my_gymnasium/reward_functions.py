@@ -28,13 +28,13 @@ def obstacle_heading_reward(heading_diff):
     """
     if heading_diff < np.pi/8:
         # Negative reward that peaks at heading_diff = 0
-        return -3.0 * (1.0 - heading_diff/(np.pi/8))
+        return -10.0 * (1.0 - heading_diff/np.pi/8)
     else:
         # Smooth positive reward curve that:
         # - Starts positive at pi/8
         # - Peaks at pi/2 (90 degrees)
         # - Gradually levels off after pi/2
-        return 2.0 * (1.0 - np.exp(-(heading_diff - np.pi/8)))  # Exponential approach to maximum
+        return 10.0 * (1.0 - np.exp(-(heading_diff - np.pi/8)))  # Exponential approach to maximum
 
 
 def speed_reward(speed_ratio, distance_to_goal):
@@ -126,3 +126,34 @@ def rotation_penalty(cumulative_rotation):
     else:
         # Severe penalty for full rotation
         return -50.0
+
+
+def obstacle_proximity_reward(distance, radius, safety_margin):
+    """
+    Calculate proximity reward for obstacle avoidance:
+    - Only applies when distance < safety_margin
+    - Exponentially increases from 1.0 to 10.0 as agent gets closer to obstacle
+    - Maximum penalty (10.0) when distance = radius
+    - Minimum penalty (1.0) when distance = safety_margin
+    
+    Args:
+        distance (float): Distance to obstacle
+        radius (float): Radius of the obstacle
+        safety_margin (float): Distance at which to start applying the reward
+        
+    Returns:
+        float: Negative reward that grows exponentially as agent gets closer to obstacle
+    """
+    if distance >= safety_margin * 0.8:
+        return 0.0
+        
+    # Normalize distance to [0, 1] range where:
+    # 0 = at obstacle surface (distance = radius)
+    # 1 = at safety margin (distance = safety_margin)
+    normalized_distance = (distance - radius) / (safety_margin - radius)
+    
+    # Exponential growth from -1.0 to -10.0
+    base_penalty = -1.0
+    max_penalty = -5.0
+    
+    return base_penalty + (max_penalty - base_penalty) * (1 - normalized_distance) ** 2
