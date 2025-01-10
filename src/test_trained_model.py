@@ -1,4 +1,4 @@
-from stable_baselines3 import SAC, PPO
+from stable_baselines3 import SAC
 import argparse
 from pathlib import Path
 import glob
@@ -34,7 +34,7 @@ def find_full_run_path(short_run_id):
         return sorted(possible_paths, key=lambda x: Path(x).stat().st_ctime)[-1]
     return possible_paths[0]
 
-def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_SEED, env_type='base'):
+def test_trained_model(run_id=None, episodes=1, seed=DEFAULT_SEED, env_type='base'):
     """Test the trained model for multiple episodes"""
     
     # Create environment with same seed
@@ -60,10 +60,10 @@ def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_S
         return
     
     # Load the appropriate model type
-    ModelClass = get_model_class(model_type)
+    ModelClass = SAC
     model = ModelClass.load(str(model_path))
     
-    logger.info(f"Testing {model_type.upper()} model from run {run_id}")
+    logger.info(f"Testing SAC model from run {run_id}")
     
     # Get git info from metadata
     metadata_path = Path(full_run_path) / "files" / "wandb-metadata.json"
@@ -119,8 +119,6 @@ def test_trained_model(model_type='sac', run_id=None, episodes=1, seed=DEFAULT_S
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test a trained RL model')
-    parser.add_argument('--model-type', type=str, default='sac',
-                      help='Type of model to test (sac, ppo)')
     parser.add_argument('--run-id', type=str, required=True,
                       help='Short Wandb run ID (e.g., 1d9n4yxh)')
     parser.add_argument('--episodes', type=int, default=1,
@@ -133,7 +131,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     test_trained_model(
-        model_type=args.model_type,
         run_id=args.run_id,
         episodes=args.episodes,
         seed=args.seed,
