@@ -52,7 +52,7 @@ def plot_speed_rewards():
                 arrowprops=dict(facecolor='black', shrink=0.05))
     
     # Adjust plot limits to show full range of rewards
-    plt.ylim(-25, 8)
+    plt.ylim(-15, 8)
     plt.xlim(0, 2.0)
     
     # Ensure no clipping of labels

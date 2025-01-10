@@ -11,7 +11,7 @@ def plot_reward_function():
     # Convert radians to degrees for better readability
     heading_diffs_deg = np.degrees(heading_diffs)
     
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 8))
     plt.plot(heading_diffs_deg, rewards, 'b-', linewidth=2)
     
     # Add vertical lines at key points
@@ -24,7 +24,7 @@ def plot_reward_function():
     
     # Customize the plot
     plt.grid(True, alpha=0.3)
-    plt.title('Heading Reward Function (Gaussian)', fontsize=14)
+    plt.title('Heading Reward Function (Gaussian)', fontsize=14, pad=20)
     plt.xlabel('Heading Difference (degrees)', fontsize=12)
     plt.ylabel('Reward', fontsize=12)
     plt.legend(fontsize=10)
@@ -32,12 +32,12 @@ def plot_reward_function():
     # Add annotations for key points
     plt.annotate(f'Max Reward\n({heading_reward(0):.1f})', 
                 xy=(0, heading_reward(0)), 
-                xytext=(10, 2.5),
+                xytext=(10, 11),
                 arrowprops=dict(facecolor='black', shrink=0.05))
     
     plt.annotate(f'At 30°\n({heading_reward(np.pi/6):.1f})', 
                 xy=(30, heading_reward(np.pi/6)), 
-                xytext=(40, 1.5),
+                xytext=(40, 5),
                 arrowprops=dict(facecolor='black', shrink=0.05))
     
     plt.annotate(f'At 90°\n({heading_reward(np.pi/2):.1f})', 
@@ -45,7 +45,17 @@ def plot_reward_function():
                 xytext=(100, 0.5),
                 arrowprops=dict(facecolor='black', shrink=0.05))
     
-    plt.ylim(-0.5, 3.5)
+    plt.annotate(f'Min Reward\n({heading_reward(np.pi):.1f})', 
+                xy=(180, heading_reward(np.pi)), 
+                xytext=(160, -8),
+                arrowprops=dict(facecolor='black', shrink=0.05))
+    
+    # Set axis limits to show full range
+    plt.ylim(-12, 12)
+    plt.xlim(-5, 185)
+    
+    # Ensure no clipping of labels
+    plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":

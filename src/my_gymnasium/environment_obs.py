@@ -51,18 +51,22 @@ class ASVObsEnvironment(gym.Env):
         self.observation_space = spaces.Dict({
             # Vessel state - normalized values
             'vessel_state': spaces.Box(
+                # [x, y, heading, speed, angular_velocity]
                 low=np.array([-1.0, -1.0, -1.0, 0.0, -1.0], dtype=np.float32),
                 high=np.array([1.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32),
                 dtype=np.float32
             ),
             # Goal information - normalized
             'goal_info': spaces.Box(
+                # [distance, heading]
                 low=np.array([0.0, -1.0], dtype=np.float32),
                 high=np.array([1.0, 1.0], dtype=np.float32),
                 dtype=np.float32
             ),
+            # Obstacles - normalized
             'obstacles': spaces.Box(
-                low=np.array([[0.0, -1.0, 0.0] for _ in range(N_OBSTACLES)], dtype=np.float32),  # [distance, heading_diff, radius]
+                # [distance, heading_diff, radius]
+                low=np.array([[0.0, -1.0, 0.0] for _ in range(N_OBSTACLES)], dtype=np.float32),  
                 high=np.array([[1.0, 1.0, 1.0] for _ in range(N_OBSTACLES)], dtype=np.float32),
                 shape=(N_OBSTACLES, 3),
                 dtype=np.float32

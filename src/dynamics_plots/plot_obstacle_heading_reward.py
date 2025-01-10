@@ -11,7 +11,7 @@ def plot_reward_function():
     # Convert radians to degrees for better readability
     heading_diffs_deg = np.degrees(heading_diffs)
     
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(12, 8))
     plt.plot(heading_diffs_deg, rewards, 'b-', linewidth=2)
     
     # Add vertical lines at key points
@@ -24,7 +24,7 @@ def plot_reward_function():
     
     # Customize the plot
     plt.grid(True, alpha=0.3)
-    plt.title('Obstacle Heading Reward Function', fontsize=14)
+    plt.title('Obstacle Heading Reward Function', fontsize=14, pad=20)
     plt.xlabel('Heading Difference (degrees)', fontsize=12)
     plt.ylabel('Reward', fontsize=12)
     plt.legend(fontsize=10)
@@ -32,20 +32,30 @@ def plot_reward_function():
     # Add annotations for key points
     plt.annotate(f'Max Penalty\n({obstacle_heading_reward(0):.1f})', 
                 xy=(0, obstacle_heading_reward(0)), 
-                xytext=(10, -2.5),
+                xytext=(10, -12),
                 arrowprops=dict(facecolor='black', shrink=0.05))
     
     plt.annotate(f'Transition Point\n(0.0)', 
                 xy=(np.degrees(np.pi/8), 0), 
-                xytext=(15, 0.5),
+                xytext=(15, 2),
+                arrowprops=dict(facecolor='black', shrink=0.05))
+    
+    plt.annotate(f'At 90°\n({obstacle_heading_reward(np.pi/2):.1f})', 
+                xy=(90, obstacle_heading_reward(np.pi/2)), 
+                xytext=(100, 8),
                 arrowprops=dict(facecolor='black', shrink=0.05))
     
     plt.annotate(f'Asymptotic Max\n({obstacle_heading_reward(np.pi):.1f})', 
                 xy=(180, obstacle_heading_reward(np.pi)), 
-                xytext=(150, 1.5),
+                xytext=(150, 9),
                 arrowprops=dict(facecolor='black', shrink=0.05))
     
-    plt.ylim(-3.5, 2.5)
+    # Set axis limits to show full range
+    plt.ylim(-12, 12)  # Function ranges from -10 to +10
+    plt.xlim(-5, 185)  # Show full range of angles with padding
+    
+    # Ensure no clipping of labels
+    plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":

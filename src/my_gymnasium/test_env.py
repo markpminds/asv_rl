@@ -1,4 +1,4 @@
-from environment import ASVEnvironment
+from my_gymnasium.environment_obs import ASVObsEnvironment
 from config import setup_logger
 import time
 import matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ logger = setup_logger('ASV_Environment_Test')
 
 def test_environment():
     # Create and initialize environment
-    env = ASVEnvironment()
+    env = ASVObsEnvironment()
     
     # Get initial state
     obs, _ = env.reset()
@@ -22,9 +22,6 @@ def test_environment():
     # logger.info("Obstacles:")
     # for i, obs in enumerate(env.obstacles):
     #    logger.info(f"Obstacle {i+1}: position ({obs[0]:.2f}, {obs[1]:.2f}), radius {obs[2]:.2f}")
-    #logger.info("Threat Zones:")
-    #for i, zone in enumerate(env.threat_zones):
-    #    logger.info(f"Zone {i+1}: center ({zone[0]:.2f}, {zone[1]:.2f}), width {zone[2]:.2f}, height {zone[3]:.2f}")
 
     # Visualize environment
     logger.info("Displaying environment visualization...")

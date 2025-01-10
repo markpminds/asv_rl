@@ -28,7 +28,7 @@ def obstacle_heading_reward(heading_diff):
     """
     if heading_diff < np.pi/8:
         # Negative reward that peaks at heading_diff = 0
-        return -10.0 * (1.0 - heading_diff/np.pi/8)
+        return -10.0 * (1.0 - heading_diff/(np.pi/8))
     else:
         # Smooth positive reward curve that:
         # - Starts positive at pi/8
@@ -65,7 +65,7 @@ def speed_reward(speed_ratio, distance_to_goal):
             return -3.5 - 80.0 * (0.3 - speed_ratio) ** 2
         elif speed_ratio < 0.75:
             # Moderate penalty for suboptimal speeds
-            return 3.5 - 5.0 * (1.0 - speed_ratio)
+            return 2.5 - 8.5 * (1.0 - speed_ratio)
         else:
             # Reward for maintaining speed close to desired
             return 2.0 * np.exp(-((speed_ratio - 1.0) / 0.2) ** 2)
