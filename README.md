@@ -1,5 +1,5 @@
 # Reinforcement Learning for Autonomous Surface Vessels
-A project exploring autonomous surface vessel navigation using reinforcement learning.
+A project exploring autonomous surface vessel navigation and collision avoidance using reinforcement learning.
 
 ## Gymnasium Environment
 
