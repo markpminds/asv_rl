@@ -293,7 +293,7 @@ class ASVObsEnvironment(gym.Env):
             real_heading_diff = norm_heading_diff * np.pi
             
             if real_distance < real_radius:  # Collision
-                reward -= 100.0
+                reward -= 500.0
                 truncated = True
                 logger.warning(f"Collision with obstacle {i+1} at position ({self.obstacles[i][0]:.1f}, {self.obstacles[i][1]:.1f})")
                 return observation, reward, done, truncated, {}
@@ -311,6 +311,8 @@ class ASVObsEnvironment(gym.Env):
         if not obs_priority:
             # Add heading reward
             reward += heading_reward(heading_diff)
+            if distance_to_goal < 10.0:
+                reward += heading_reward(heading_diff)
             if progress < 0:
                 reward -= progress
 
@@ -331,7 +333,7 @@ class ASVObsEnvironment(gym.Env):
         # Check for timeout
         if self.steps > MAX_TIMESTEPS:
             truncated = True
-            reward -= 100.0
+            reward -= 1000.0
             logger.warning("Episode truncated due to timeout")
             return observation, reward, done, truncated, {}
 
