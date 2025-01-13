@@ -29,11 +29,8 @@ from my_gymnasium.reward_functions import (
 
 logger = setup_logger('ASV_Obs_Environment')
 
-VERSION = "1.0.0"  # Increment this when making significant changes
-
 class ASVObsEnvironment(gym.Env):
     def __init__(self, seed=None):
-        self.version = VERSION
         super().__init__()
         # Set the seed for the environment
         self.np_random, _ = gym.utils.seeding.np_random(seed)

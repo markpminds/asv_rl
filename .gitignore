@@ -42,6 +42,7 @@ src/.DS_Store
 
 images/
 pres_images/
+Screenshots/
 
 # Ruff cache
 .ruff_cache/
